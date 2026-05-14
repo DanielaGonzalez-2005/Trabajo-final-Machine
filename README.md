@@ -1,4 +1,5 @@
-# 🌍 Sistema de Inteligencia Multifuente
+
+   # 🌍 Sistema de Inteligencia Multifuente
 ## Conflicto Irán–Israel–EE.UU. | ML1-2026I
 **Universidad Externado de Colombia · Pregrado en Ciencia de Datos**
 
@@ -47,9 +48,15 @@ Sistema de inteligencia multifuente que clasifica el nivel de escalada del confl
 | # | Fuente | Dimensión | Período | Registro |
 |---|---|---|---|---|
 | 1 | **ACLED** | Eventos físicos | 2024-01 → 2025-05 | ✅ Gratuito |
-| 2 | **GDELT** | Señal mediática | 2025-05 → 2026-05 | ❌ Sin registro |
+| 2 | **GDELT** | Señal mediática + análisis lingüístico | 2025-05 → 2026-05 | ❌ Sin registro |
 | 3 | **Yahoo Finance** | Señal económica | 2024-01 → 2026-05 | ❌ Sin registro |
-| 4 | **Embeddings** | Sentido lingüístico | 2026-02 → 2026-05 | ❌ Sin registro |
+
+> **Nota sobre GDELT:** Esta fuente tiene dos usos en el proyecto.
+> El primero es el tono mediático diario usado como feature numérica directa.
+> El segundo son los 685 títulos de artículos, que se procesan con embeddings
+> (`all-MiniLM-L6-v2`) para capturar el sentido lingüístico real del conflicto.
+> Los embeddings no son una fuente externa — son un método de procesamiento
+> aplicado sobre los datos de GDELT.
 
 ---
 
@@ -90,10 +97,120 @@ Sistema de inteligencia multifuente que clasifica el nivel de escalada del confl
 
     brent_paises = pd.concat([df_brent.assign(pais=p) for p in PAISES])
 
-**Embeddings** — clasificación semántica de titulares con similitud coseno:
+**GDELT — Análisis lingüístico con Embeddings**
 
-    modelo = SentenceTransformer('all-MiniLM-L6-v2')
-    similitud = cosine_similarity(embedding_titular, embeddings_referencia)
+Los 685 títulos descargados de GDELT se procesan con el modelo de lenguaje
+`all-MiniLM-L6-v2` de `sentence-transformers`. Este modelo convierte cada
+titular en un vector numérico de 384 dimensiones que captura su significado
+semántico real — no solo las palabras que contiene.
+
+#### ¿Por qué embeddings y no conteo de palabras?
+
+El conteo simple de palabras tiene limitaciones críticas:
+
+    "Iran denies missile attack"   → conteo = 2 palabras de conflicto
+                                     ← INCORRECTO (es una negación)
+
+    "Rocket fired toward Tel Aviv" → "rocket" no está en la lista
+                                     ← INCORRECTO (pierde la señal)
+
+Los embeddings entienden el significado real:
+
+    "Iran launches ballistic missiles" → score_alta = 0.538 ✅
+    "Iranian missile cluster strike"   → score_alta = 0.520 ✅ (sinónimo)
+    "Peace talks resume in Vienna"     → score_baja  = 0.227 ✅
+
+#### ¿Cómo funciona la clasificación?
+
+Se definieron frases de referencia por cada nivel de escalada.
+El modelo compara cada titular contra esas frases usando similitud coseno.
+El nivel con mayor similitud determina la clasificación del titular.
+
+**Frases de referencia — Nivel ALTA (2):**
+
+    "Iran launches ballistic missile attack on Israel"
+    "Israel conducts massive airstrike bombing Iran"
+    "Military strike kills dozens in explosion"
+    "Civilians killed in rocket attack on city"
+    "Warplanes bomb military base causing casualties"
+
+**Frases de referencia — Nivel MEDIA (1):**
+
+    "Military tensions escalate between Iran and Israel"
+    "US deploys warships to Persian Gulf amid tensions"
+    "Iran threatens retaliation against Israel"
+    "Naval vessels patrol Strait of Hormuz"
+    "Military forces placed on high alert"
+
+**Frases de referencia — Nivel BAJA (0):**
+
+    "Iran and US resume diplomatic negotiations"
+    "Ceasefire agreement reached between parties"
+    "Peace talks make progress in Vienna"
+    "Both sides agree to de-escalation measures"
+    "Sanctions partially lifted after agreement"
+
+#### Pipeline completo del análisis lingüístico
+
+    PASO 1: Cargar los 685 títulos de gdelt_articulos_2026.csv
+
+    PASO 2: Cargar el modelo de embeddings
+        modelo = SentenceTransformer('all-MiniLM-L6-v2')
+
+    PASO 3: Calcular embeddings de las frases de referencia
+        emb_ref['alta']  = modelo.encode(frases_alta)   # shape (10, 384)
+        emb_ref['media'] = modelo.encode(frases_media)  # shape (10, 384)
+        emb_ref['baja']  = modelo.encode(frases_baja)   # shape (10, 384)
+
+    PASO 4: Calcular embeddings de cada titular
+        emb_titulares = modelo.encode(titulares)  # shape (685, 384)
+
+    PASO 5: Clasificar por similitud coseno
+        sim_alta  = cosine_similarity(emb_titular, emb_ref['alta']).mean()
+        sim_media = cosine_similarity(emb_titular, emb_ref['media']).mean()
+        sim_baja  = cosine_similarity(emb_titular, emb_ref['baja']).mean()
+        nivel = max({'alta': sim_alta, 'media': sim_media, 'baja': sim_baja})
+
+    PASO 6: Agregar por país-día
+        Para cada país y cada día:
+        - nivel_emb_dia    = nivel dominante (moda de los titulares del día)
+        - pct_alta_emb     = % titulares clasificados como alta escalada
+        - score_alta_prom  = similitud promedio con frases de ataque
+        - confianza_prom   = diferencia entre el mejor y segundo mejor score
+
+    PASO 7: Unir al dataset final por fecha + pais
+
+#### Resultados del análisis lingüístico
+
+    Ejemplos clasificados correctamente:
+
+    ALTA (2):
+    → [Israel] "Iranian Ballistic Missile Attacks Kill 3 U.S. Servicemen"
+               score_alta=0.538 | score_media=0.349 | score_baja=0.186
+
+    → [Israel] "Iranian ballistic missile cluster munitions strike dozens"
+               score_alta=0.520 | score_media=0.336 | score_baja=0.190
+
+    MEDIA (1):
+    → [Israel] "US moves toward invasion with UAE and Saudi involvement"
+               score_alta=0.234 | score_media=0.355 | score_baja=0.219
+
+    → [Israel] "Iran war latest: Non-hostile vessel can now enter Strait"
+               score_alta=0.205 | score_media=0.362 | score_baja=0.226
+
+#### Columnas generadas por los embeddings
+
+| Columna | Descripción | Rango |
+|---|---|---|
+| `nivel_emb_dia` | Nivel dominante del día (0/1/2) | 0 a 2 |
+| `pct_alta_emb` | % titulares de alta escalada | 0% a 100% |
+| `pct_media_emb` | % titulares de escalada media | 0% a 100% |
+| `pct_baja_emb` | % titulares de calma | 0% a 100% |
+| `score_alta_prom` | Similitud promedio con frases de ataque | 0 a 0.41 |
+| `score_media_prom` | Similitud promedio con frases de tensión | 0 a 0.38 |
+| `score_baja_prom` | Similitud promedio con frases de calma | 0 a 0.31 |
+| `confianza_prom` | Certeza promedio de la clasificación | 0 a 0.14 |
+| `n_titulares` | Titulares procesados ese día | 0 a 101 |
 
 ---
 
@@ -154,11 +271,15 @@ Sistema de inteligencia multifuente que clasifica el nivel de escalada del confl
     precio_brent_cambio, brent_variacion_3d,
     n_articulos_2026_3d, n_articulos_2026_cambio
 
-**EMBEDDINGS — Sentido lingüístico (9)**
+**EMBEDDINGS — Sentido lingüístico de títulos GDELT (9)**
 
     nivel_emb_dia, pct_alta_emb, pct_media_emb, pct_baja_emb,
     score_alta_prom, score_media_prom, score_baja_prom,
     confianza_prom, n_titulares
+
+    → Generadas aplicando embeddings sobre los títulos de GDELT 2026
+
+---
 
 ---
 
@@ -168,3 +289,4 @@ Sistema de inteligencia multifuente que clasifica el nivel de escalada del confl
 - El período 2025-2026 usa señal mediática como proxy de escalada
 - GDELT captura más noticias en inglés — eventos en persa o hebreo pueden estar subrepresentados
 - Algunos titulares de GDELT contienen ruido no relacionado al conflicto
+ 
