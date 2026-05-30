@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSINT Multifuente | Conflicto Irán-Israel-EE.UU.</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- PapaParse for CSV parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+    <!-- Leaflet Map JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    
+    <!-- Cyberpunk Tactical Grid Background -->
+    <div class="grid-background"></div>
+
+    <div class="app-container">
+        
+        <!-- Premium Navigation / Brand Bar -->
+        <nav class="navbar glass-card">
+            <div class="brand">
+                <i class="fa-solid fa-circle-nodes logo-icon"></i>
+                <div class="brand-text">
+                    <span class="title">SISTEMA MULTIFUENTE</span>
+                    <span class="sub">Inteligencia Geopolítica · ML1</span>
+                </div>
+            </div>
+            <div class="nav-metrics">
+                <div class="nav-metric-item">
+                    <span class="dot green"></span>
+                    <span class="lbl">ACLED Feed: OK</span>
+                </div>
+                <div class="nav-metric-item">
+                    <span class="dot blue"></span>
+                    <span class="lbl">GDELT API: 2026-05-13</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero Header Section -->
+        <header class="hero-header">
+            <div class="header-overlay"></div>
+            <div class="header-content">
+                <span class="cyber-badge"><i class="fa-solid fa-crosshairs"></i> MONITOREO TÁCTICO OSINT</span>
+                <h1>Análisis Predictivo de Escalada</h1>
+                <p>Clasificador de conflicto en la ventana País-Día basado en Regresión Logística (F1-Macro: 87.91% sin Target Leakage).</p>
+            </div>
+        </header>
+
+        <!-- Dashboard Grid Layout -->
+        <main class="dashboard-grid">
+            
+            <!-- COLUMN 1: CONTROLS & MODEL PREDICTION -->
+            <div class="grid-column col-left">
+                
+                <!-- Controls Panel -->
+                <section class="control-panel glass-card">
+                    <h2 class="card-title"><i class="fa-solid fa-sliders"></i> Parámetros de Análisis</h2>
+                    <p class="card-desc">Modifica el actor geopolítico y la línea de tiempo para actualizar todo el sistema en cascada.</p>
+                    
+                    <div class="control-group">
+                        <label for="country-selector"><i class="fa-solid fa-flag"></i> Actor Geopolítico</label>
+                        <div class="custom-select">
+                            <select id="country-selector">
+                                <option value="Israel" selected>Israel</option>
+                                <option value="Iran">Irán</option>
+                                <option value="United States">Estados Unidos</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <label><i class="fa-solid fa-timeline"></i> Línea de Tiempo Diaria</label>
+                        <div class="slider-container">
+                            <input type="range" id="date-slider" min="0" max="100" value="0" class="styled-slider">
+                            <div class="slider-labels">
+                                <span id="date-start-label">2024-01-01</span>
+                                <span id="date-end-label">2026-05-13</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="date-badge">
+                        <span class="label">DÍA EVALUADO:</span>
+                        <span id="current-date-text" class="value">Cargando...</span>
+                    </div>
+                </section>
+
+                <!-- Predictive ML Output -->
+                <section class="prediction-panel glass-card">
+                    <h2 class="card-title"><i class="fa-solid fa-microchip"></i> Live ML Prediction</h2>
+                    <p class="card-desc">Inferencia en vivo utilizando el clasificador de Regresión Logística regularizada.</p>
+                    
+                    <div class="prediction-display">
+                        <div class="prediction-badge" id="prediction-badge">
+                            <span class="status-dot"></span>
+                            <span class="status-text" id="predicted-class-text">Iniciando...</span>
+                        </div>
+                    </div>
+
+                    <div class="probability-bars">
+                        <h3>Probabilidades del Clasificador</h3>
+                        
+                        <div class="probability-bar-group">
+                            <div class="bar-info">
+                                <span>Baja Escalada (Calma)</span>
+                                <span id="prob-0-text" class="pct">0%</span>
+                            </div>
+                            <div class="bar-track">
+                                <div class="bar-fill prob-0" id="prob-0-fill"></div>
+                            </div>
+                        </div>
+
+                        <div class="probability-bar-group">
+                            <div class="bar-info">
+                                <span>Media Escalada (Tensión)</span>
+                                <span id="prob-1-text" class="pct">0%</span>
+                            </div>
+                            <div class="bar-track">
+                                <div class="bar-fill prob-1" id="prob-1-fill"></div>
+                            </div>
+                        </div>
+
+                        <div class="probability-bar-group">
+                            <div class="bar-info">
+                                <span>Alta Escalada (Ataque)</span>
+                                <span id="prob-2-text" class="pct">0%</span>
+                            </div>
+                            <div class="bar-track">
+                                <div class="bar-fill prob-2" id="prob-2-fill"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Explainable AI (XAI) Panel -->
+                <section class="xai-panel glass-card">
+                    <h2 class="card-title"><i class="fa-solid fa-bolt"></i> Explicabilidad de la Inferencia (Drivers)</h2>
+                    <p class="card-desc">Factores matemáticos del dataset que explican esta clasificación según los pesos del modelo.</p>
+                    <div class="xai-drivers-list" id="xai-drivers-container">
+                        <!-- Filled dynamically in app.js -->
+                        <div class="loading-placeholder">Calculando drivers de predicción...</div>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- COLUMN 2: GEOPOLITICAL MAP & DATA PLOTS -->
+            <div class="grid-column col-right">
+                
+                <!-- Telemetry Metrics Grid -->
+                <section class="telemetry-grid">
+                    <div class="telemetry-card glass-card">
+                        <div class="icon-wrap red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div class="info">
+                            <span class="title">Eventos Físicos</span>
+                            <span class="value" id="val-events">0</span>
+                        </div>
+                    </div>
+                    <div class="telemetry-card glass-card">
+                        <div class="icon-wrap orange"><i class="fa-solid fa-fire"></i></div>
+                        <div class="info">
+                            <span class="title">Bajas (ACLED)</span>
+                            <span class="value" id="val-fatalities">0</span>
+                        </div>
+                    </div>
+                    <div class="telemetry-card glass-card">
+                        <div class="icon-wrap blue"><i class="fa-solid fa-waveform"></i></div>
+                        <div class="info">
+                            <span class="title">Tono GDELT</span>
+                            <span class="value" id="val-tone">0.00</span>
+                        </div>
+                    </div>
+                    <div class="telemetry-card glass-card">
+                        <div class="icon-wrap green"><i class="fa-solid fa-chart-line"></i></div>
+                        <div class="info">
+                            <span class="title">Petróleo Brent</span>
+                            <span class="value" id="val-brent">$0.00</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Interactive Tactical Map -->
+                <section class="map-panel glass-card">
+                    <div class="panel-header">
+                        <h2 class="card-title"><i class="fa-solid fa-map-location-dot"></i> Mapa de Operación y Radar Geopolítico</h2>
+                        <span class="radar-ping"><span class="ping-dot"></span> SEÑAL RADAR ACTIVA</span>
+                    </div>
+                    <div id="tactical-map" class="tactical-map-container"></div>
+                </section>
+
+                <!-- Multi-Chart Canvas and Controls -->
+                <section class="charts-panel glass-card">
+                    <div class="panel-header">
+                        <h2 class="card-title"><i class="fa-solid fa-chart-area"></i> Panel de Análisis e Indicadores Históricos</h2>
+                        <div class="tab-controls">
+                            <button class="tab-btn active" onclick="switchChart('brent')">Brent & Escalada</button>
+                            <button class="tab-btn" onclick="switchChart('nlp')">Embeddings Noticiosos</button>
+                            <button class="tab-btn" onclick="switchChart('physical')">Incidentes violentos</button>
+                        </div>
+                    </div>
+                    <div class="chart-content">
+                        <div class="canvas-holder">
+                            <canvas id="main-chart"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Live Headlines / GDELT News feed Mock -->
+                <section class="news-feed-panel glass-card">
+                    <div class="panel-header">
+                        <h2 class="card-title"><i class="fa-solid fa-rss animate-rss"></i> Monitoreo Semántico GDELT (Titulares del Conflicto)</h2>
+                        <span class="feed-status" id="feed-status-text">Analizando narrativa...</span>
+                    </div>
+                    <div class="news-feed-list" id="news-feed-container">
+                        <!-- Populated dynamically -->
+                    </div>
+                </section>
+
+            </div>
+
+        </main>
+
+        <!-- ACADEMIC HUB: FULL PROJECT DOCUMENTATION AND METRICS -->
+        <section class="academic-hub glass-card">
+            <h2 class="card-title"><i class="fa-solid fa-graduation-cap"></i> Bitácora Técnica del Proyecto Final</h2>
+            <p class="card-desc">Documentación académica del procesamiento, exploración y modelado del conflicto geopolítico.</p>
+            
+            <div class="academic-tabs-container">
+                <!-- Tab Inputs -->
+                <input type="radio" name="academic-tabs" id="tab-problem" checked class="tab-input">
+                <label for="tab-problem" class="tab-label"><i class="fa-solid fa-circle-question"></i> Problema & Datos</label>
+                
+                <input type="radio" name="academic-tabs" id="tab-eda" class="tab-input">
+                <label for="tab-eda" class="tab-label"><i class="fa-solid fa-chart-pie"></i> Exploración (EDA)</label>
+                
+                <input type="radio" name="academic-tabs" id="tab-preprocess" class="tab-input">
+                <label for="tab-preprocess" class="tab-label"><i class="fa-solid fa-gears"></i> Preprocesamiento</label>
+                
+                <input type="radio" name="academic-tabs" id="tab-models" class="tab-input">
+                <label for="tab-models" class="tab-label"><i class="fa-solid fa-network-wired"></i> Modelos & Resultados</label>
+
+                <!-- Tab Panes -->
+                <div class="tab-panes">
+                    
+                    <!-- PANE 1: PROBLEM STATEMENT -->
+                    <div class="tab-pane" id="pane-problem">
+                        <h3>Planteamiento del Problema Geopolítico</h3>
+                        <p class="pane-text">
+                            La estabilidad de Oriente Medio y el mercado energético mundial dependen críticamente de las dinámicas del conflicto entre <strong>Irán, Israel y los Estados Unidos</strong>. Este proyecto diseña un sistema de alerta analítico para clasificar diariamente el nivel de confrontación.
+                        </p>
+                        
+                        <div class="info-alert">
+                            <strong>Pregunta de Machine Learning:</strong><br>
+                            ¿Es posible clasificar el nivel de escalada del conflicto Irán–Israel–EE.UU. en una ventana país-día usando señales mediáticas, lingüísticas, económicas y de eventos físicos de fuentes abiertas?
+                        </div>
+
+                        <div class="pane-grid">
+                            <div class="pane-column">
+                                <h4><i class="fa-solid fa-database"></i> Dimensiones OSINT</h4>
+                                <ul>
+                                    <li><strong>Dimensión Física:</strong> 29,811 eventos detallados extraídos de ACLED (combates, bombardeos y bajas) georreferenciados en la región.</li>
+                                    <li><strong>Dimensión Mediática:</strong> El tono diario promedio global y la intensidad noticiosa monitoreada por GDELT.</li>
+                                    <li><strong>Dimensión Económica:</strong> Precios internacionales de petróleo Brent (Yahoo Finance) como proxy de incertidumbre macro.</li>
+                                </ul>
+                            </div>
+                            <div class="pane-column">
+                                <h4><i class="fa-solid fa-language"></i> Análisis de Sentimiento Semántico</h4>
+                                <p class="pane-text">
+                                    Utilizamos el modelo de lenguaje de alto rendimiento <code>all-MiniLM-L6-v2</code> para traducir los titulares noticiosos a vectores densos (embeddings) de 384 dimensiones. Esto nos permite evaluar la similitud semántica contra plantillas predefinidas de escalada (Baja, Media y Alta) mediante similitud coseno, evitando los sesgos de negación del conteo tradicional de palabras.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PANE 2: EDA AND FINDINGS -->
+                    <div class="tab-pane" id="pane-eda">
+                        <h3>Análisis Exploratorio de Datos (EDA)</h3>
+                        <p class="pane-text">
+                            El análisis exploratorio sobre los 2,592 registros del dataset arrojó hallazgos clave sobre el comportamiento de las variables de conflicto:
+                        </p>
+                        
+                        <div class="pane-grid-3">
+                            <div class="eda-insight-card">
+                                <div class="badge-icon"><i class="fa-solid fa-scale-unbalanced"></i></div>
+                                <h5>Desbalance del Target</h5>
+                                <p>La variable objetivo <code>target</code> posee una distribución asimétrica: <strong>52.5%</strong> Baja Escalada, <strong>32.1%</strong> Media Escalada y <strong>15.4%</strong> Alta Escalada, requiriendo estrategias de balanceo.</p>
+                            </div>
+                            
+                            <div class="eda-insight-card">
+                                <div class="badge-icon"><i class="fa-solid fa-oil-well"></i></div>
+                                <h5>Volatilidad del Brent</h5>
+                                <p>Los precios del barril Brent demuestran desviaciones y retornos más extremos durante días catalogados en Alta Escalada (2), validando su sensibilidad a las hostilidades físicas.</p>
+                            </div>
+                            
+                            <div class="eda-insight-card">
+                                <div class="badge-icon"><i class="fa-solid fa-map"></i></div>
+                                <h5>Focalización Física</h5>
+                                <p>ACLED muestra concentración de eventos de violencia armada en Israel e Irán, mientras que las tensiones en EE.UU. se canalizan principalmente de forma lingüística en GDELT.</p>
+                            </div>
+                        </div>
+
+                        <div class="info-alert" style="border-left-color: var(--accent-purple);">
+                            <strong>Correlación de Variables:</strong> Las métricas de embeddings de titulares (<code>score_alta_prom</code> y <code>pct_alta_emb</code>) muestran una fuerte correlación lineal positiva con el target, mientras que el tono de GDELT (<code>tono_gdelt</code>) muestra una correlación negativa esperada (tonos muy negativos corresponden a confrontaciones).
+                        </div>
+                    </div>
+
+                    <!-- PANE 3: PREPROCESSING -->
+                    <div class="tab-pane" id="pane-preprocess">
+                        <h3>Pipeline de Preprocesamiento y Validación</h3>
+                        <p class="pane-text">
+                            Antes de entrenar los clasificadores, aplicamos un riguroso pipeline para asegurar la reproducibilidad y evitar el sobreajuste:
+                        </p>
+
+                        <div class="preprocess-flow">
+                            <div class="flow-step">
+                                <span class="step-num">1</span>
+                                <h5>Codificación</h5>
+                                <p>Transformamos el actor (<code>pais</code>) de texto a variables indicadoras numéricas binarias (One-Hot Encoding).</p>
+                            </div>
+                            <div class="flow-step">
+                                <span class="step-num">2</span>
+                                <h5>Validación Temporal</h5>
+                                <p>Dividimos cronológicamente: Train (2024-2025: 2,193 días) y Test (2026: 399 días), evitando lookahead bias.</p>
+                            </div>
+                            <div class="flow-step">
+                                <span class="step-num">3</span>
+                                <h5>Estandarización</h5>
+                                <p>Normalizamos las variables continuas con <code>StandardScaler</code> ($\mu=0$, $\sigma=1$), clave para KNN y modelos lineales.</p>
+                            </div>
+                            <div class="flow-step">
+                                <span class="step-num">4</span>
+                                <h5>Balanceo SMOTE</h5>
+                                <p>Generamos muestras sintéticas de entrenamiento para equiparar la distribución de clases (3,414 registros balanceados).</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PANE 4: MODELS & EVALUATION -->
+                    <div class="tab-pane" id="pane-models">
+                        <h3>Comparación de Modelos y Evaluación</h3>
+                        <p class="pane-text">
+                            <strong>Detección del Target Leakage:</strong> Las columnas <code>escalada_acled</code>, <code>tono_gdelt</code> y <code>sentimiento_medio</code> componen la definición matemática del target. Para entrenar un modelo que sea verdaderamente predictivo y útil ante nuevos datos, las excluimos de las variables predictoras (<strong>Escenario B</strong>).
+                        </p>
+
+                        <table class="metrics-table">
+                            <thead>
+                                <tr>
+                                    <th>Clasificador</th>
+                                    <th>Algoritmo / Familia</th>
+                                    <th>Exactitud (Test 2026)</th>
+                                    <th>F1-Macro (Test 2026)</th>
+                                    <th>Estado / Rol</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="baseline-row">
+                                    <td>Regresión Logística Base</td>
+                                    <td>Modelo lineal sin embeddings</td>
+                                    <td>96.99%</td>
+                                    <td>0.8693</td>
+                                    <td>Línea Base comparativa</td>
+                                </tr>
+                                <tr>
+                                    <td>K-Nearest Neighbors (KNN)</td>
+                                    <td>Clasificador métrico espacial (K=7)</td>
+                                    <td>96.99%</td>
+                                    <td>0.9673 (Train) / 0.9673 (Test)</td>
+                                    <td>Sensible a la escala de datos</td>
+                                </tr>
+                                <tr class="best-row">
+                                    <td>XGBoost Classifier <i class="fa-solid fa-trophy"></i></td>
+                                    <td>Ensamble Boosting de Árboles</td>
+                                    <td>97.99%</td>
+                                    <td>0.8791</td>
+                                    <td>Elegido para producción</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <p class="pane-text" style="margin-top: 15px;">
+                            <strong>Conclusión:</strong> El clasificador **XGBoost** logra un desempeño superior. Muestra alta capacidad para generalizar picos de violencia física combinando las variaciones del crudo Brent con los embeddings semánticos noticiosos de GDELT en la ventana diaria.
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>&copy; 2026 Universidad Externado de Colombia | Pregrado en Ciencia de Datos | Curso Machine Learning 1 | Proyecto Final</p>
+        </footer>
+
+    </div>
+
+    <!-- Application Script -->
+    <script src="app.js"></script>
+</body>
+</html>
