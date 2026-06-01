@@ -12,6 +12,9 @@ Sistema de inteligencia multifuente que clasifica el nivel de escalada del confl
 **Pregunta de ML:**
 > ¿Es posible clasificar el nivel de escalada del conflicto Irán–Israel–EE.UU. en una ventana país-día usando señales mediáticas, textuales, económicas y de eventos físicos de fuentes abiertas?
 
+
+**Dashboard**
+https://aesthetic-mooncake-31284a.netlify.app/ 
 ---
 
 ## 🗂️ Estructura del Repositorio
